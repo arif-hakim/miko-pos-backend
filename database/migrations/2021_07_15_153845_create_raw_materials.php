@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateSupplies extends Migration
+class CreateRawMaterials extends Migration
 {
     /**
      * Run the migrations.
@@ -13,10 +13,12 @@ class CreateSupplies extends Migration
      */
     public function up()
     {
-        Schema::create('supplies', function (Blueprint $table) {
+        Schema::create('raw_materials', function (Blueprint $table) {
             $table->id();
-            $table->integer('amount')->default(0);
-            $table->unsignedInteger('product_id');
+            $table->string('name');
+            $table->string('code');
+            $table->integer('stock')->default(0);
+            $table->string('unit_measurement');
             $table->timestamps();
         });
     }
@@ -28,6 +30,6 @@ class CreateSupplies extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('supplies');
+        Schema::dropIfExists('raw_materials');
     }
 }

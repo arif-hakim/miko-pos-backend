@@ -87,9 +87,28 @@ class CompanyController extends Controller
      * @param  \App\Models\Company  $company
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Company $company)
+    public function update(Request $request, $id)
     {
-        //
+        if ($request->authenticatedUser->company_id != $id) return Response::forbidden();
+        $validation = \Validator::make($request->all(), [
+            'name' => 'required',
+            'email' => 'required',
+        ]);
+        
+        if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
+
+        $isAlreadyExists = Model::where([
+            'name' => $request->name,
+            'email' => $request->email,
+        ])->where('id', '!=', $id)->first();
+        
+        if($isAlreadyExists) return Response::error('Company name already exists!');
+        
+        $company = Model::find($request->id);
+        if(!$company) return Response::error('Data not found!');
+        $company->update($request->all());
+
+        return Response::success('Company information has been successfully updated!', $company);
     }
 
     /**
@@ -98,8 +117,12 @@ class CompanyController extends Controller
      * @param  \App\Models\Company  $company
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Company $company)
+    public function destroy($id)
     {
-        //
+        $company = Model::find($id);
+
+        if (!$company) return Response::error('Company not found!');
+        $company->destroy();
+        return Response::success('Company has been successfully deleted!');
     }
 }

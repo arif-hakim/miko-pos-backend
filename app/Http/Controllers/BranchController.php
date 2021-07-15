@@ -88,9 +88,27 @@ class BranchController extends Controller
      * @param  \App\Models\Branch  $branch
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Branch $branch)
+    public function update(Request $request, $id)
     {
-        //
+        $validation = \Validator::make($request->all(), [
+            'name' => 'required',
+            'email' => 'required',
+        ]);
+        
+        if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
+
+        $isAlreadyExists = Model::where([
+            'company_id' => $request->authenticatedUser->company_id,
+            'name' => $request->name,
+        ])->where('id', '!=', $request->id)->first();
+        
+        if($isAlreadyExists) return Response::error('Branch name already exists!');
+
+        $branch = Model::find($id);
+        if(!$branch) return Response::error('Data not found!');
+        $branch->update($request->all());
+        
+        return Response::success('Branch has been successfully updated!', $branch);
     }
 
     /**
@@ -99,8 +117,11 @@ class BranchController extends Controller
      * @param  \App\Models\Branch  $branch
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Branch $branch)
+    public function destroy($id)
     {
-        //
+        $branch = Model::find($id);
+        if (!$branch) return Response::error('Branch not found!');
+        $branch->destroy();
+        return Response::success('Branch has been successfully deleted!');
     }
 }

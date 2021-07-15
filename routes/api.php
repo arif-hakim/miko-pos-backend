@@ -7,6 +7,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,14 +30,10 @@ Route::group(['middleware' => 'accessToken'], function(){
     '/branch' => BranchController::class,
     '/unit' => UnitController::class,
     '/category' => CategoryController::class,
+    '/product' => ProductController::class,
   ]);
   
-  Route::group(['prefix' => 'company'], function(){
-  });
-
-  Route::group(['prefix' => 'branch'], function(){
-  });
-
-  Route::group(['prefix' => 'unit'], function(){
+  Route::group(['prefix' => 'product'], function(){
+    Route::post('/{id}/update-stock', [ProductController::class, 'updateStock']);
   });
 });

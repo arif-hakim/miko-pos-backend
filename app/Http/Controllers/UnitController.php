@@ -89,9 +89,27 @@ class UnitController extends Controller
      * @param  \App\Models\Unit  $unit
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Unit $unit)
+    public function update(Request $request, $id)
     {
-        //
+        $validation = \Validator::make($request->all(), [
+            'name' => 'required',
+        ]);
+        
+        if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
+
+        $isAlreadyExists = Model::where([
+            'branch_id' => $request->branch_id,
+            'name' => $request->name
+        ])->first();
+
+        if($isAlreadyExists) return Response::error('Unit name already exists!');
+        
+        $unit = Model::find($id);
+        if(!$unit) return Response::error('Data not found!');
+        
+        $unit->update($request->all());
+        
+        return Response::success('Unit has been successfully updated!', $unit);
     }
 
     /**
@@ -100,8 +118,10 @@ class UnitController extends Controller
      * @param  \App\Models\Unit  $unit
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Unit $unit)
+    public function destroy($id)
     {
-        //
+        $unit = Model::find($id);
+        if (!$unit) return Response::error('Data not found!');
+        return Response::success('Unit has been successfully deleted!');
     }
 }

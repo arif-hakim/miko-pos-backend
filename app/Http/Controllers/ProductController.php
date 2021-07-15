@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category as Model;
+use App\Models\Product as Model;
+use App\Models\ProductStockHistory;
 use Illuminate\Http\Request;
 use App\Lib\Response;
 use Illuminate\Validation\Rule;
 
-class CategoryController extends Controller
+class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -43,23 +44,25 @@ class CategoryController extends Controller
         $validation = \Validator::make($request->all(), [
             'name' => [
                 'required',
-                Rule::unique('categories')->where(function ($query) use($unit_id) {
+                Rule::unique('products')->where(function ($query) use($unit_id) {
                     return $query->where('unit_id', $unit_id);
                 })
             ],
             'code' => [
                 'required',
-                Rule::unique('categories')->where(function ($query) use($unit_id) {
+                Rule::unique('products')->where(function ($query) use($unit_id) {
                     return $query->where('unit_id', $unit_id);
                 })
             ],
+            'base_price' => 'required',
+            'selling_price' => 'required',
             'unit_id' => 'required',
+            'category_id' => 'required',
         ]);
-        
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
 
         $data = Model::create($request->all());
-        return Response::success('New category has been successfully created!', $data);
+        return Response::success('Product has been successfully created!', $data);
     }
 
     /**
@@ -70,7 +73,7 @@ class CategoryController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $data = Model::whereId($id)->with('products')->first();
+        $data = Model::whereId($id)->first();
         if(!$data) return Response::error('Data not found!');
         return Response::success('', $data);
     }
@@ -102,24 +105,26 @@ class CategoryController extends Controller
         $validation = \Validator::make($request->all(), [
             'name' => [
                 'required',
-                Rule::unique('categories')->where(function ($query) use($unit_id, $id) {
+                Rule::unique('products')->where(function ($query) use($unit_id, $id) {
                     return $query->where('unit_id', $unit_id)->where('id', '!=' , $id);
                 })
             ],
             'code' => [
                 'required',
-                Rule::unique('categories')->where(function ($query) use($unit_id, $id) {
+                Rule::unique('products')->where(function ($query) use($unit_id, $id) {
                     return $query->where('unit_id', $unit_id)->where('id', '!=' , $id);
                 })
             ],
+            'base_price' => 'required',
+            'selling_price' => 'required',
+            'category_id' => 'required',
         ]);
         
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
 
         //  Updating ..
         $data->update($request->all());
-
-        return Response::success('Category has been successfully updated!', $data);
+        return Response::success('Product has been successfully updated!', $data);
     }
 
     /**
@@ -133,6 +138,35 @@ class CategoryController extends Controller
         $data = Model::find($id);
         if (!$data) return Response::error('Data not found!');
         $data->delete();
-        return Response::success('Category has been successfully deleted!');
+        return Response::success('Product has been successfully deleted!');
+    }
+
+    public function updateStock(Request $request, $id){
+        try {
+            \DB::beginTransaction();
+            $data = Model::find($id);
+            if (!$data) return Response::error('Data not found!');
+            
+            $data->stock = $data->stock + $request->changes;
+            $data->save();
+    
+            $history = new ProductStockHistory();
+            $history->product_id = $id;
+            
+            $isMinus = $request->changes < 0;
+            $willBeMinus = $data->stock + $request->changes < 0;
+            if ($isMinus && $willBeMinus) return Response::error('Update failed! Stock will be minus.');
+            $history->changes = $request->changes;
+            
+            if ($request->description) $history->description = $request->description;
+            if ($request->source) $history->source = $request->source;
+            if ($request->source_id) $history->source_id = $request->source_id;
+            $history->save();
+            \DB::commit();
+            return Response::success('Stock has been successfully updated!');
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return Response::error('Something went wrong!');
+        }
     }
 }
