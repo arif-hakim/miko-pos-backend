@@ -18,9 +18,9 @@ class ProductController extends Controller
     public function index(Request $request)
     {
 
-        $data = Model::whereUnitId($request->unit_id)->get();
+        $data = Model::whereUnitId($request->unit_id)->with('category')->get();
         return Response::success('', $data);
-}
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -146,21 +146,23 @@ class ProductController extends Controller
             \DB::beginTransaction();
             $data = Model::find($id);
             if (!$data) return Response::error('Data not found!');
+            if ($request->changes == 0) return Response::error('Stock changes cannot be zero.');
             
-            $data->stock = $data->stock + $request->changes;
-            $data->save();
-    
             $history = new ProductStockHistory();
             $history->product_id = $id;
             
             $isMinus = $request->changes < 0;
-            $willBeMinus = $data->stock + $request->changes < 0;
-            if ($isMinus && $willBeMinus) return Response::error('Update failed! Stock will be minus.');
+            $willBeMinus = ($data->stock + $request->changes) < 0;
+            if ($isMinus && $willBeMinus) return Response::error('Update failed! Stock will be minus.', ['result' => [$data->stock, $request->changes, $data->stock - $request->changes]]);
             $history->changes = $request->changes;
             
             if ($request->description) $history->description = $request->description;
             if ($request->source) $history->source = $request->source;
             if ($request->source_id) $history->source_id = $request->source_id;
+            
+            $data->stock = $data->stock + $request->changes;
+            $data->save();
+            
             $history->save();
             \DB::commit();
             return Response::success('Stock has been successfully updated!');
@@ -168,5 +170,11 @@ class ProductController extends Controller
             \DB::rollback();
             return Response::error('Something went wrong!');
         }
+    }
+    
+    public function getStockHistory($id)
+    {
+        $data = Model::whereId($id)->with('stockHistories')->first();
+        return Response::success('', $data);
     }
 }

@@ -35,5 +35,6 @@ Route::group(['middleware' => 'accessToken'], function(){
   
   Route::group(['prefix' => 'product'], function(){
     Route::post('/{id}/update-stock', [ProductController::class, 'updateStock']);
+    Route::get('/{id}/stock-history', [ProductController::class, 'getStockHistory']);
   });
 });

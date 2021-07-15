@@ -8,4 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 class ProductStockHistory extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'product_id',
+        'changes',
+        'description',
+        'source',
+        'source_id',
+    ];
+
+    public function product() {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
 }

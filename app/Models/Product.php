@@ -23,4 +23,12 @@ class Product extends Model
     public function unit(){
         return $this->belongsTo(Unit::class, 'unit_id');
     }
+
+    public function category(){
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function stockHistories(){
+        return $this->hasMany(ProductStockHistory::class, 'product_id');
+    }
 }
