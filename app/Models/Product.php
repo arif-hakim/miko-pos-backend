@@ -17,7 +17,12 @@ class Product extends Model
         'base_price',
         'selling_price',
         'unit_id',
-        'category_id'
+        'category_id',
+        'picture',
+    ];
+
+    protected $appends = [
+        'default_picture'
     ];
 
     public function unit(){
@@ -30,5 +35,13 @@ class Product extends Model
 
     public function stockHistories(){
         return $this->hasMany(ProductStockHistory::class, 'product_id');
+    }
+
+    public function getPictureAttribute($value) {
+        return $value ? config('app.url') . '/storage/products/' . $value : null;
+    }
+
+    public function getDefaultPictureAttribute() {
+        return config('app.url') . '/default.png';
     }
 }

@@ -17,9 +17,16 @@ class UnitController extends Controller
      */
     public function index(Request $request)
     {
-        $id = $request->authenticatedUser->company_id;
-        $company = Company::whereId($id)->with(['units'])->first();
-        return Response::success('', $company->units);
+        $company_id = $request->authenticatedUser->company_id;
+        $branch_id = $request->branch_id;
+        
+        $units = Model::whereHas('branch.company', function($query) use ($company_id) {
+            $query->where('company_id', $company_id);
+        })->with('branch');
+        if ($branch_id) $units = $units->whereBranchId($branch_id);       
+        $units = $units->get();
+
+        return Response::success('', $units);
 }
 
     /**

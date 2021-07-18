@@ -41,7 +41,8 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $unit_id = $request->unit_id;
-        $validation = \Validator::make($request->all(), [
+        $input = $request->all();
+        $validation = \Validator::make($input, [
             'name' => [
                 'required',
                 Rule::unique('products')->where(function ($query) use($unit_id) {
@@ -58,11 +59,35 @@ class ProductController extends Controller
             'selling_price' => 'required',
             'unit_id' => 'required',
             'category_id' => 'required',
+            'picture' => 'required|file|max:2048|mimes:jpg,jpeg,png'
         ]);
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
 
-        $data = Model::create($request->all());
+        if ($request->hasFile('picture') && $request->picture->isValid()) {
+            $dir = 'products/';
+            $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
+            $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
+        }
+
+        $data = Model::create($input);
         return Response::success('Product has been successfully created!', $data);
+    }
+
+    private function uploadImage($file, $dir, $name){
+        if (!\Storage::disk('public')->exists($dir)) \Storage::disk('public')->makeDirectory($dir);
+        
+        if($file->isValid()){
+            $encode = 'png';
+            $filename = $dir . $name . ".$encode";
+            $destination = 'storage/' . $filename;
+
+            $result = \Image::make($file)->resize(350, null, function($constraint){ 
+                $constraint->aspectRatio(); 
+            })->crop(350, 350)->encode($encode)->save($destination);
+            
+            return $name;
+        }
+        return null;
     }
 
     /**

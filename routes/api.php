@@ -8,6 +8,7 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TransactionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,10 +32,15 @@ Route::group(['middleware' => 'accessToken'], function(){
     '/unit' => UnitController::class,
     '/category' => CategoryController::class,
     '/product' => ProductController::class,
+    '/transaction' => TransactionController::class,
   ]);
   
   Route::group(['prefix' => 'product'], function(){
     Route::post('/{id}/update-stock', [ProductController::class, 'updateStock']);
     Route::get('/{id}/stock-history', [ProductController::class, 'getStockHistory']);
+  });
+
+  Route::group(['prefix' => 'transaction'], function(){
+    Route::put('/{id}/status', [TransactionController::class, 'updateStatus']);
   });
 });
