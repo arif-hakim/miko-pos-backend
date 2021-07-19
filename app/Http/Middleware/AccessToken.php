@@ -20,21 +20,21 @@ class AccessToken
     public function handle(Request $request, Closure $next)
     {
         $token = $request->bearerToken();
-        if (!$token) return Response::unauthorized();
+        if (!$token) return Response::unauthorized('Unauthorized. Token doesn\'t exists');
 
         try {
             $secret = config('app.jwt_secret');
             $decoded = JWT::decode($token, $secret, array('HS256'));
             
             $user = User::whereEmail($decoded->email)->first();
-            if(!$user) return Response::unauthorized();
+            if(!$user) return Response::unauthorized('Unauthorized. User doesn\'t exists');
             
             $request->authenticatedUser = $user;
             $request->authenticatedToken = $token;
 
             return $next($request);
         } catch (\Exception $e){
-            return Response::unauthorized();
+            return Response::unauthorized('Unauthorized. General error.');
         }
         
     }
