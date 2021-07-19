@@ -34,7 +34,7 @@ class AccessToken
 
             return $next($request);
         } catch (\Exception $e){
-            return Response::unauthorized('Unauthorized. General error.');
+            return Response::unauthorized('Unauthorized. General error.', $e->getMessage());
         }
         
     }
