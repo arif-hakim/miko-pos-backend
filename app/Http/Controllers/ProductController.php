@@ -146,9 +146,11 @@ class ProductController extends Controller
         ]);
         
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
-
+        
+        $input = $request->all();
+        if (!$request->picture) $input = $request->except(['picture']);
         //  Updating ..
-        $data->update($request->all());
+        $data->update($input);
         return Response::success('Product has been successfully updated!', $data);
     }
 
