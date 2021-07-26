@@ -70,7 +70,9 @@ class TransactionController extends Controller
             foreach ($request->items as $item) {
                 $product = Product::find($item['product_id']);
                 if (!$product) return Response::error('Oops, there is a product that is not available!', $item);
-                if ($product->stock - $item['quantity'] < 0) $errorMessages[$product->code] = ["Oops, $product->name only $product->stock $product->unit_measurement left!"];
+
+                if ($product->stock == 0) $errorMessages[$product->code] = ["Oops, $product->name is sold out!"];
+                else if ($product->stock - $item['quantity'] < 0) $errorMessages[$product->code] = ["Oops, $product->name only $product->stock $product->unit_measurement left!"];
                 
                 $transactionDetail = new TransactionDetail();
                 $transactionDetail->product_id = $product->id;
@@ -78,7 +80,9 @@ class TransactionController extends Controller
                 $transactionDetail->quantity = $item['quantity'];
                 $transactionDetail->profit = ($product->selling_price * $item['quantity']) - ($product->base_price * $item['quantity']);
                 $transactionDetail->price = $product->selling_price;
+                $transactionDetail->total_base_price = $product->base_price * $item['quantity'];
                 $transactionDetail->total_price = $product->selling_price * $item['quantity'];
+                $transactionDetail->note = $item['note'] ?? '';
                 $transactionDetail->items = [
                     'code' => $product->code,
                     'name' => $product->name,
@@ -175,7 +179,7 @@ class TransactionController extends Controller
     {
         $data = Model::find($id);
         if (!$data) return Response::error('Data not found!');
-        if ($data->payment_status === 'Unpaid') $data->restoreAllProductsStock();
+        if ($data->payment_status === 'Unpaid') return Response::error('Transaction is still running!');
         $data->delete();
         return Response::success('Transaction has been successfully deleted!');
     }

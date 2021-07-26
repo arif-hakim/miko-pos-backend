@@ -12,9 +12,11 @@ class TransactionDetail extends Model
         'quantity',
         'profit',
         'price',
+        'total_base_price',
         'total_price',
         'items',
-        'is_canceled'
+        'is_canceled',
+        'note'
     ];
 
     protected $casts = [

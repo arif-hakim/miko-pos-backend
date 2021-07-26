@@ -17,8 +17,9 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-
-        $data = Model::whereUnitId($request->unit_id)->with('category')->get();
+        $data = Model::whereUnitId($request->unit_id)->with('category');
+        if ($request->search) $data = $data->where('name', 'like', "%$request->search%");
+        $data = $data->get();
         return Response::success('', $data);
     }
 
@@ -71,23 +72,6 @@ class ProductController extends Controller
 
         $data = Model::create($input);
         return Response::success('Product has been successfully created!', $data);
-    }
-
-    private function uploadImage($file, $dir, $name){
-        if (!\Storage::disk('public')->exists($dir)) \Storage::disk('public')->makeDirectory($dir);
-        
-        if($file->isValid()){
-            $encode = 'png';
-            $filename = $dir . $name . ".$encode";
-            $destination = 'storage/' . $filename;
-
-            $result = \Image::make($file)->resize(350, null, function($constraint){ 
-                $constraint->aspectRatio(); 
-            })->crop(350, 350)->encode($encode)->save($destination);
-            
-            return $name;
-        }
-        return null;
     }
 
     /**
@@ -148,7 +132,15 @@ class ProductController extends Controller
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
         
         $input = $request->all();
-        if (!$request->picture) $input = $request->except(['picture']);
+        if ($request->hasFile('picture') && $request->picture->isValid()) {
+            $dir = 'products/';
+            $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
+            
+            if ($data->picture) \Storage::disk('public')->delete($dir . $filename);
+            
+            $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
+        } else $input = $request->except(['picture']);
+        
         //  Updating ..
         $data->update($input);
         return Response::success('Product has been successfully updated!', $data);
@@ -203,5 +195,27 @@ class ProductController extends Controller
     {
         $data = Model::whereId($id)->with('stockHistories')->first();
         return Response::success('', $data);
+    }
+
+    
+    private function uploadImage($file, $dir, $name){
+        if (!\Storage::disk('public')->exists($dir)) \Storage::disk('public')->makeDirectory($dir);
+        
+        if($file->isValid()){
+            $encode = 'png';
+            $filename = $name . ".$encode";
+            $destination = "storage/$dir/$filename";
+
+            $src = \Image::make($file)->resize(510, null, function($constraint){ 
+                        $constraint->aspectRatio(); 
+                    })->encode($encode)->save($destination);
+            // $result = \Image::make($file)->resize(350, null, function($constraint){ 
+            //     $constraint->aspectRatio(); 
+            // })->crop(350, 350)->fill('#fff')->encode($encode)->save($destination);
+            $result = \Image::canvas(510, 350, '#fff')->insert($destination, 'center')->save($destination);
+
+            return $filename;
+        }
+        return null;
     }
 }
