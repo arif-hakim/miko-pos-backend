@@ -14,7 +14,7 @@ class AddQrcodeToUnits extends Migration
     public function up()
     {
         Schema::table('units', function (Blueprint $table) {
-            $table->string('qrcode_content')->nullable()->change();
+            $table->string('qrcode')->nullable();
         });
     }
 
@@ -26,7 +26,7 @@ class AddQrcodeToUnits extends Migration
     public function down()
     {
         Schema::table('units', function (Blueprint $table) {
-            $table->string('qrcode_content')->nullable()->change();
+            $table->dropColumn('qrcode');
         });
     }
 }
