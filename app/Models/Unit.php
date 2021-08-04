@@ -11,10 +11,22 @@ class Unit extends Model
     
     protected $fillable = [
         'name',
-        'branch_id'
+        'branch_id',
+        'qrcode',
+        'qrcode_content',
+        'tax'
+    ];
+
+    protected $appends = [
+        'qrcode_url'
     ];
 
     public function branch(){
         return $this->belongsTo(Branch::class, 'branch_id');
+    }
+    
+    public function getQrcodeUrlAttribute(){
+        $base_url = config('app.url');
+        return array_key_exists('qrcode', $this->attributes) ? $base_url . '/storage/qrcodes/' . $this->attributes['qrcode'] : null;
     }
 }

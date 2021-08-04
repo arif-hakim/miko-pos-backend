@@ -24,4 +24,8 @@ class Company extends Model
     public function units() {
         return $this->hasManyThrough(Unit::class, Branch::class);
     }
+
+    public function owner() {
+        return $this->attributes['id'];
+    }
 }

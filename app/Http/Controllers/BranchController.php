@@ -54,7 +54,7 @@ class BranchController extends Controller
         $request['company_id'] = $request->authenticatedUser->company_id;
         $branch = Model::create($request->all());
         
-        return Response::success('Your first branch has been successfully created!', $branch);
+        return Response::success('New branch has been successfully created!', $branch);
     }
 
     /**

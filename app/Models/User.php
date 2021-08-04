@@ -12,7 +12,6 @@ use App\Models\Unit;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -45,8 +44,6 @@ class User extends Authenticatable
      *
      * @var array
      */
-    protected $casts = [
-    ];
 
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.

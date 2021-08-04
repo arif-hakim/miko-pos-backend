@@ -17,7 +17,13 @@ class CompanyController extends Controller
     public function index(Request $request)
     {
         $id = $request->authenticatedUser->company_id;
-        $data = Model::whereCompanyId($id)->with(['branches', 'units'])->get();
+        $data = Model::whereId($id)->first();
+        $owner = User::whereCompanyId($data->id)->whereRole('Owner')->first();
+        $data->owner = [
+            'id' => $owner->id,
+            'name' => $owner->firstname . ' ' . $owner->lastname,
+            'email' => $owner->email,
+        ];
         return Response::success('', $data);
     }
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductStokHistory;
 
 class Transaction extends Model
 {
@@ -38,17 +39,25 @@ class Transaction extends Model
 
     public function restoreAllProductsStock() {
         try {
+            \DB::beginTransaction();
             $transactionDetails = $this->transaction_details;
             foreach($transactionDetails as $detail) {
                 $product = $detail->product;
                 if(!$product) continue;
                 $product->stock += $detail->quantity;
                 $product->save();
+
+                $productStockHistory = new ProductStockHistory();
+                $productStockHistory->product_id = $detail->product_id;
+                $productStockHistory['changes'] = $detail->quantity;
+                $productStockHistory->description = "#" . $this->code . " canceled";
+                $productStockHistory->save();
             }
+            \DB::commit();
             return true;
         } catch (\Exception $e){
-            dd($e->getMessage());
-            return false;
+            \DB::rollback();
+            return $e->getMessage();
         }
     }
 }

@@ -136,7 +136,7 @@ class ProductController extends Controller
             $dir = 'products/';
             $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
             
-            if ($data->picture) \Storage::disk('public')->delete($dir . $filename);
+            if ($data->picture) \Storage::disk('public')->delete($dir . $data->picture);
             
             $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
         } else $input = $request->except(['picture']);
@@ -193,7 +193,7 @@ class ProductController extends Controller
     
     public function getStockHistory($id)
     {
-        $data = Model::whereId($id)->with('stockHistories')->first();
+        $data = ProductStockHistory::whereProductId($id)->get();
         return Response::success('', $data);
     }
 

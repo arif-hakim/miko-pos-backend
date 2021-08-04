@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction as Model;
 use App\Models\TransactionDetail;
 use App\Models\Product;
+use App\Models\ProductStockHistory;
 use Illuminate\Http\Request;
 use App\Lib\Response;
 use Illuminate\Validation\Rule;
@@ -93,6 +94,12 @@ class TransactionController extends Controller
                 $transactionDetail->save();
                 $product->stock -= $item['quantity'];
                 $product->save();
+
+                $productStockHistory = new ProductStockHistory();
+                $productStockHistory->product_id = $item['product_id'];
+                $productStockHistory['changes'] = -1 * $item['quantity'];
+                $productStockHistory->description = "#$transaction->code";
+                $productStockHistory->save();
             }
 
             if (count($errorMessages) > 0) {
@@ -193,7 +200,10 @@ class TransactionController extends Controller
             if ($data->payment_status == 'Paid') return Response::error('Transaction was already paid!');
 
             $data->payment_status = $request->payment_status;
-            if ($request->payment_status == 'Canceled') $data->restoreAllProductsStock();
+            if ($request->payment_status == 'Canceled') {
+                $cancel = $data->restoreAllProductsStock();
+                if (!$cancel) return Response::error('A problem encountered while canceling order.');
+            }
             $data->save();
             \DB::commit();
             return Response::success('Status has been successfully updated!', $data);
@@ -220,6 +230,6 @@ class TransactionController extends Controller
     public function getStockHistory($id)
     {
         $data = Model::whereId($id)->with('stockHistories')->first();
-        return Response::success('', $data);
+        return Response::success('', $data->stock_histories);
     }
 }

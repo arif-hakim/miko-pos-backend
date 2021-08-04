@@ -63,6 +63,7 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
+    'order_page_url' => env('ORDER_PAGE_URL', 'http://localhost:8080'),
 
     'asset_url' => env('ASSET_URL', null),
 
