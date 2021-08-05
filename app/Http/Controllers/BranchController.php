@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch as Model;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Lib\Response;
+use Firebase\JWT\JWT;
 
 class BranchController extends Controller
 {
@@ -121,7 +123,23 @@ class BranchController extends Controller
     {
         $branch = Model::find($id);
         if (!$branch) return Response::error('Branch not found!');
-        $branch->destroy();
+        $branch->delete();
         return Response::success('Branch has been successfully deleted!');
+    }
+
+    public function employeeBranch(Request $request) {
+        try {
+            $token = $request->employee_token;
+            $secret = config('app.jwt_secret');
+            $decoded = JWT::decode($token, $secret, array('HS256'));
+            
+            $user = User::whereEmail($decoded->email)->with('company.branches')->first();
+            if(!$user) return Response::unauthorized('Unauthorized.', 'User doesn\'t exists.');
+            
+            $branches = Model::where('company_id', $user->company_id)->with('units')->get();
+            return Response::success('', $branches);
+        } catch (\Exception $e){
+            return Response::unauthorized('Unauthorized.', $e->getMessage());
+        }
     }
 }

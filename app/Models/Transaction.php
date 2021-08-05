@@ -18,15 +18,38 @@ class Transaction extends Model
         'user_id',
         'payment_status',
         'description',
+        'tax',
+        'officer_name',
+        'table_number',
+        'employee_id',
+        'employee_unit_id',
     ];
 
     protected $appends = [
         'transaction_value',
+        'grand_total',
+        'profit',
     ];
 
 
     public function transaction_details() {
         return $this->hasMany(TransactionDetail::class, 'transaction_id');
+    }
+
+    public function employee() {
+        return $this->belongsTo(User::class, 'employee_id');
+    }
+
+    public function employee_unit() {
+        return $this->belongsTo(Unit::class, 'employee_unit_id');
+    }
+
+    public function getProfitAttribute() {
+        $value = 0;
+        foreach($this->transaction_details as $item){
+            $value += $item->profit;
+        }
+        return $value;
     }
 
     public function getTransactionValueAttribute() {
@@ -37,6 +60,14 @@ class Transaction extends Model
         return $value;
     }
 
+    public function getGrandTotalAttribute() {
+        $value = 0;
+        foreach($this->transaction_details as $item){
+            $value += $item->total_price;
+        }
+        return $value + ( $value * ($this->tax / 100));
+    }
+
     public function restoreAllProductsStock() {
         try {
             \DB::beginTransaction();
@@ -44,14 +75,17 @@ class Transaction extends Model
             foreach($transactionDetails as $detail) {
                 $product = $detail->product;
                 if(!$product) continue;
-                $product->stock += $detail->quantity;
-                $product->save();
-
+                
                 $productStockHistory = new ProductStockHistory();
                 $productStockHistory->product_id = $detail->product_id;
+                $productStockHistory->from = $product->stock;
                 $productStockHistory['changes'] = $detail->quantity;
+                $productStockHistory->to = $product->stock + $detail->quantity;
                 $productStockHistory->description = "#" . $this->code . " canceled";
                 $productStockHistory->save();
+                
+                $product->stock += $detail->quantity;
+                $product->save();
             }
             \DB::commit();
             return true;

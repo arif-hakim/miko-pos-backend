@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction as Model;
 use App\Models\TransactionDetail;
 use App\Models\Product;
+use App\Models\Unit;
 use App\Models\ProductStockHistory;
 use Illuminate\Http\Request;
 use App\Lib\Response;
@@ -22,7 +23,16 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
 
-        $data = Model::whereUnitId($request->unit_id)->with('transaction_details')->get();
+        $data = Model::whereUnitId($request->unit_id)
+                ->with(['transaction_details', 'employee', 'employee_unit.branch']);
+
+        if ($request->start_date && $request->end_date) {
+            $from = date('Y-m-d 00:00:00', strtotime($request->start_date));
+            $to = date('Y-m-d 23:59:59', strtotime($request->end_date));
+            $data = $data->whereBetween('created_at', [$from, $to]);
+        }
+        
+        $data = $data->orderBy('created_at', 'desc')->get();
         return Response::success('', $data);
     }
 
@@ -45,11 +55,12 @@ class TransactionController extends Controller
     public function store(Request $request)
     {
         $unit_id = $request->unit_id;
+        $unit = Unit::find($unit_id);
+        if (!$unit) return Response::error('Unit not found!');
         $validation = \Validator::make($request->all(), [
             'items.*' => 'required',
             'payment_status' => 'required',
             'unit_id' => 'required',
-            'customer_name' => 'required',
         ]);
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
         try {
@@ -60,10 +71,16 @@ class TransactionController extends Controller
             $dataTransaction = [
                 'code' => 'TR' . $uniqueCode,
                 'unit_id' => $request->unit_id,
-                'customer_name' => $request->customer_name,
                 'payment_status' => $request->payment_status,
                 'description' => $request->description,
+                'tax' => $unit->tax,
             ];
+
+            if ($request->customer_name) $dataTransaction['customer_name'] = $request->customer_name;
+            if ($request->table_number) $dataTransaction['table_number'] = $request->table_number;
+
+            if ($request->employee_id) $dataTransaction['employee_id'] = $request->employee_id;
+            if ($request->employee_unit_id) $dataTransaction['employee_unit_id'] = $request->employee_unit_id;
 
             $transaction = Model::create($dataTransaction);
 
@@ -92,14 +109,20 @@ class TransactionController extends Controller
                 ];
                 
                 $transactionDetail->save();
-                $product->stock -= $item['quantity'];
-                $product->save();
 
                 $productStockHistory = new ProductStockHistory();
                 $productStockHistory->product_id = $item['product_id'];
+                $productStockHistory->from = $product->stock;
                 $productStockHistory['changes'] = -1 * $item['quantity'];
+                $productStockHistory->to = $product->stock - $item['quantity'];
                 $productStockHistory->description = "#$transaction->code";
+                if ($transaction->employee_id) {
+                    $productStockHistory->source = 'unit';
+                    $productStockHistory->source_id = $transaction->employee_unit_id;
+                }
                 $productStockHistory->save();
+                $product->stock -= $item['quantity'];
+                $product->save();
             }
 
             if (count($errorMessages) > 0) {
@@ -200,9 +223,13 @@ class TransactionController extends Controller
             if ($data->payment_status == 'Paid') return Response::error('Transaction was already paid!');
 
             $data->payment_status = $request->payment_status;
+            $data->officer_name = $request->authenticatedUser->firstname . ' ' . $request->authenticatedUser->lastname;
             if ($request->payment_status == 'Canceled') {
                 $cancel = $data->restoreAllProductsStock();
                 if (!$cancel) return Response::error('A problem encountered while canceling order.');
+            }
+            if ($request->payment_status == 'Paid' && $request->paid){
+                $data->paid = $request->paid;
             }
             $data->save();
             \DB::commit();

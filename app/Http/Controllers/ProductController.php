@@ -82,7 +82,7 @@ class ProductController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $data = Model::whereId($id)->first();
+        $data = Model::whereId($id)->with('category')->first();
         if(!$data) return Response::error('Data not found!');
         return Response::success('', $data);
     }
@@ -173,7 +173,10 @@ class ProductController extends Controller
             $isMinus = $request->changes < 0;
             $willBeMinus = ($data->stock + $request->changes) < 0;
             if ($isMinus && $willBeMinus) return Response::error('Update failed! Stock will be minus.', ['result' => [$data->stock, $request->changes, $data->stock - $request->changes]]);
+            
+            $history->from = $data->stock;
             $history->changes = $request->changes;
+            $history->to = $data->stock + $request->changes;
             
             if ($request->description) $history->description = $request->description;
             if ($request->source) $history->source = $request->source;
@@ -193,7 +196,7 @@ class ProductController extends Controller
     
     public function getStockHistory($id)
     {
-        $data = ProductStockHistory::whereProductId($id)->get();
+        $data = ProductStockHistory::whereProductId($id)->orderBy('created_at', 'desc')->get();
         return Response::success('', $data);
     }
 

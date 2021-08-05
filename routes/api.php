@@ -32,6 +32,7 @@ Route::group(['middleware' => 'makeOrderToken', 'prefix' => 'make-order'], funct
   Route::get('unit', [MakeOrderController::class, 'getUnit']);
   Route::post('transaction', [TransactionController::class, 'store']);
   Route::get('product', [ProductController::class, 'index']);
+  Route::post('login', [UserController::class, 'login']);
 });
 
 Route::group(['middleware' => 'accessToken'], function(){
@@ -60,13 +61,14 @@ Route::group(['middleware' => 'accessToken'], function(){
     Route::get('/{id}/stock-history', [ProductController::class, 'getStockHistory']);
   });
 
-  Route::group(['prefix' => 'transaction'], function(){
-    Route::put('/{id}/status', [TransactionController::class, 'updateStatus']);
-  });
-
   Route::group(['prefix' => 'unit'], function(){
     Route::put('/{id}/update-tax', [UnitController::class, 'updateTax']);
     Route::get('/{id}/download-qrcode', [UnitController::class, 'download']);
     Route::get('/{id}/generate-qrcode', [UnitController::class, 'generateQRCode']);
   });
+
+  Route::group(['prefix' => 'transaction'], function(){
+    Route::put('/{id}/status', [TransactionController::class, 'updateStatus']);
+  });
+
 });
