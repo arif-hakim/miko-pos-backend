@@ -29,6 +29,7 @@ class Transaction extends Model
         'transaction_value',
         'grand_total',
         'profit',
+        'change_value',
     ];
 
 
@@ -50,6 +51,15 @@ class Transaction extends Model
             $value += $item->profit;
         }
         return $value;
+    }
+
+    public function getChangeValueAttribute() {
+        if (!array_key_exists('paid', $this->attributes) || !$this->attributes['paid']) return null; 
+        $value = 0;
+        foreach($this->transaction_details as $item){
+            $value += $item->total_price;
+        }
+        return $this->attributes['paid'] - ($value + ( $value * ($this->tax / 100)));
     }
 
     public function getTransactionValueAttribute() {

@@ -145,7 +145,7 @@ class TransactionController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $data = Model::whereId($id)->with('transaction_details')->first();
+        $data = Model::whereId($id)->with(['transaction_details', 'employee', 'employee_unit.branch'])->first();
         if(!$data) return Response::error('Data not found!');
         return Response::success('', $data);
     }
