@@ -123,6 +123,8 @@ class TransactionController extends Controller
                 $productStockHistory->save();
                 $product->stock -= $item['quantity'];
                 $product->save();
+
+                $product->useRawMaterial($transaction->code, $transaction->employee_unit_id);
             }
 
             if (count($errorMessages) > 0) {
@@ -258,5 +260,47 @@ class TransactionController extends Controller
     {
         $data = Model::whereId($id)->with('stockHistories')->first();
         return Response::success('', $data->stock_histories);
+    }
+
+    public function salesReport(Request $request)
+    {
+        $unit = Unit::whereId($request->unit_id)->with('branch.company')->first();
+        $from = date('Y-m-d H:i:s', strtotime($request->from . ' 00:00'));
+        $to = date('Y-m-d H:i:s', strtotime($request->to . ' 23:59'));
+        $transactions = Model::with(['employee', 'employee_unit'])->whereUnitId($unit->id)->whereBetween('created_at', [$from, $to])->get();
+        $revenue = 0;
+        $profit = 0;
+        $costs = 0;
+        $total_tax = 0;
+
+        foreach($transactions as $x) {
+            if ($x->payment_status == 'Paid') {
+                $revenue += $x->transaction_value;
+                $profit += $x->profit;
+                $costs += $x->transaction_base_price;
+                $total_tax += $x->transaction_value * $x->tax / 100;
+            }
+        }
+            
+        $payload = [
+            'period' => [
+                'from' => $from,
+                'to' => $to,
+            ],
+            'transactions' => $transactions,
+            'revenue' => $revenue,
+            'costs' => $costs,
+            'profit' => $profit,
+            'total_tax' => $total_tax,
+            'unit' => $unit,
+        ];
+
+        // return view('pdf.sales', $payload);
+
+        $pdf = \PDF::loadView('pdf.sales', $payload);
+        $pdf->setOption('no-stop-slow-scripts', true);
+        return $pdf->download('Sales Report.pdf');
+
+        return Response::success('', $payload);
     }
 }

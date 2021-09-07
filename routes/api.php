@@ -11,6 +11,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\MakeOrderController;
 use App\Http\Controllers\RawMaterialController;
+use App\Http\Controllers\ConversionController;
 use App\Http\Controllers\RawMaterialCategoryController;
 
 /*
@@ -42,7 +43,9 @@ Route::group(['middleware' => 'accessToken'], function(){
     '/company' => CompanyController::class,
     '/branch' => BranchController::class,
     '/unit' => UnitController::class,
+    '/user' => UserController::class,
     '/category' => CategoryController::class,
+    '/conversion' => ConversionController::class,
     '/product' => ProductController::class,
     '/transaction' => TransactionController::class,
     '/material' => RawMaterialController::class,
@@ -55,20 +58,24 @@ Route::group(['middleware' => 'accessToken'], function(){
     Route::get('/{id}/stock-history', [RawMaterialController::class, 'getStockHistory']);
   });
 
+  
   Route::group(['prefix' => 'product'], function(){
     Route::post('/{id}', [ProductController::class, 'update']);
     Route::post('/{id}/update-stock', [ProductController::class, 'updateStock']);
     Route::get('/{id}/stock-history', [ProductController::class, 'getStockHistory']);
   });
-
+  
   Route::group(['prefix' => 'unit'], function(){
     Route::put('/{id}/update-tax', [UnitController::class, 'updateTax']);
     Route::get('/{id}/download-qrcode', [UnitController::class, 'download']);
     Route::get('/{id}/generate-qrcode', [UnitController::class, 'generateQRCode']);
   });
-
+  
   Route::group(['prefix' => 'transaction'], function(){
     Route::put('/{id}/status', [TransactionController::class, 'updateStatus']);
   });
-
+  
+  Route::group(['prefix' => 'report'], function(){
+    Route::get('/sales', [TransactionController::class, 'salesReport']);
+  });
 });

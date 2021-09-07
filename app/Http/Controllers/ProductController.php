@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product as Model;
 use App\Models\ProductStockHistory;
+use App\Models\Recipe;
 use Illuminate\Http\Request;
 use App\Lib\Response;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $data = Model::whereUnitId($request->unit_id)->with('category');
+        $data = Model::whereUnitId($request->unit_id)->with(['category', 'recipe.raw_material']);
         if ($request->search) $data = $data->where('name', 'like', "%$request->search%");
         $data = $data->get();
         return Response::success('', $data);
@@ -64,14 +65,34 @@ class ProductController extends Controller
         ]);
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
 
-        if ($request->hasFile('picture') && $request->picture->isValid()) {
-            $dir = 'products/';
-            $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
-            $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
+        try {
+            \DB::beginTransaction();
+            
+            if ($request->hasFile('picture') && $request->picture->isValid()) {
+                $dir = 'products/';
+                $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
+                $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
+            }
+    
+            $data = Model::create($input);
+            
+            // Recipes ..
+            $recipes = json_decode($request->recipe);
+            Recipe::where('unit_id', $data->unit_id)->where('product_id', $data->id)->delete();
+            foreach($recipes as $item) {
+                $recipe = new Recipe();
+                $recipe->product_id = $data->id;
+                $recipe->raw_material_id = $item->raw_material_id;
+                $recipe->amount = $item->amount;
+                $recipe->unit_id = $data->unit_id;
+                $recipe->save();
+            }
+            \DB::commit();
+            return Response::success('Product has been successfully created!', $data);
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return Response::error('A problem encountered while creating new product!', $data);
         }
-
-        $data = Model::create($input);
-        return Response::success('Product has been successfully created!', $data);
     }
 
     /**
@@ -82,7 +103,7 @@ class ProductController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $data = Model::whereId($id)->with('category')->first();
+        $data = Model::whereId($id)->with(['category', 'recipe.raw_material'])->first();
         if(!$data) return Response::error('Data not found!');
         return Response::success('', $data);
     }
@@ -130,20 +151,37 @@ class ProductController extends Controller
         ]);
         
         if ($validation->fails()) return Response::error('Please fullfil the form properly', ['validation' => $validation->errors()]);
-        
-        $input = $request->all();
-        if ($request->hasFile('picture') && $request->picture->isValid()) {
-            $dir = 'products/';
-            $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
-            
-            if ($data->picture) \Storage::disk('public')->delete($dir . $data->picture);
-            
-            $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
-        } else $input = $request->except(['picture']);
-        
-        //  Updating ..
-        $data->update($input);
-        return Response::success('Product has been successfully updated!', $data);
+        try {
+            \DB::beginTransaction();
+            $input = $request->all();
+            if ($request->hasFile('picture') && $request->picture->isValid()) {
+                $dir = 'products/';
+                $filename = $request->unit_id . '_' . $request->name . '_' . strtotime(\Carbon\Carbon::now());
+                
+                if ($data->picture) \Storage::disk('public')->delete($dir . $data->picture);
+                
+                $input['picture'] = $this->uploadImage($request->picture, $dir, $filename);
+            } else $input = $request->except(['picture']);
+
+            // Recipes ..
+            $recipes = json_decode($request->recipe);
+            Recipe::where('unit_id', $data->unit_id)->where('product_id', $data->id)->delete();
+            foreach($recipes as $item) {
+                $recipe = new Recipe();
+                $recipe->product_id = $data->id;
+                $recipe->raw_material_id = $item->raw_material_id;
+                $recipe->amount = $item->amount;
+                $recipe->unit_id = $data->unit_id;
+                $recipe->save();
+            }
+            //  Updating ..
+            $data->update($input);
+            \DB::commit();
+            return Response::success('Product has been successfully updated!', $data);
+        } catch(\Exception $e) {
+            \DB::rollback();
+            return Response::error('A problem encountered while updating product!', ['err' => $e->getMessage() ]);
+        } 
     }
 
     /**

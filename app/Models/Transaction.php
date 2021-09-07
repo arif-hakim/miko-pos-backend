@@ -27,6 +27,7 @@ class Transaction extends Model
 
     protected $appends = [
         'transaction_value',
+        'transaction_base_price',
         'grand_total',
         'profit',
         'change_value',
@@ -70,6 +71,14 @@ class Transaction extends Model
         return $value;
     }
 
+    public function getTransactionBasePriceAttribute() {
+        $value = 0;
+        foreach($this->transaction_details as $item){
+            $value += $item->total_base_price;
+        }
+        return $value;
+    }
+
     public function getGrandTotalAttribute() {
         $value = 0;
         foreach($this->transaction_details as $item){
@@ -96,6 +105,7 @@ class Transaction extends Model
                 
                 $product->stock += $detail->quantity;
                 $product->save();
+                $product->restoreRawMaterial();
             }
             \DB::commit();
             return true;

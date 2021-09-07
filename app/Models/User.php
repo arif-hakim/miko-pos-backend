@@ -27,6 +27,11 @@ class User extends Authenticatable
         'address',
         'phone',
         'role',
+        'access_rights'
+    ];
+
+    protected $casts = [
+        'access_rights' => 'array'
     ];
 
     /**

@@ -17,7 +17,7 @@ class RawMaterialController extends Controller
      */
     public function index(Request $request)
     {
-        $data = Model::whereUnitId($request->unit_id)->with('raw_material_category');
+        $data = Model::whereUnitId($request->unit_id)->with(['raw_material_category', 'conversion']);
         if ($request->search) $data = $data->where('name', 'like', "%$request->search%");
         $data = $data->get();
         return Response::success('', $data);
@@ -79,7 +79,7 @@ class RawMaterialController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $data = Model::whereId($id)->with('raw_material_category')->first();
+        $data = Model::whereId($id)->with(['raw_material_category', 'conversion'])->first();
         if(!$data) return Response::error('Data not found!');
         return Response::success('', $data);
     }
